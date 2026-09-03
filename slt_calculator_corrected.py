@@ -1,10 +1,17 @@
 """
 SLT (Significant Level Threshold) Calculator for Tender Evaluation
 Determines the winning supplier bid using statistical analysis
+
+CORRECT FORMULA (as per Excel implementation):
+1. Calculate Weighted Average (x-bar) from all quotations
+2. Calculate deviations from weighted average: deviation = x-bar - quotation
+3. Calculate standard deviation: SD = sqrt(average of deviations^2)
+4. SLT = x-bar - Standard Deviation
+5. SLT Score for each supplier = quotation - SLT
+6. Winner = supplier with lowest valid SLT score (>= 0)
 """
 
-import statistics
-from typing import List, Dict, Tuple
+from typing import List, Dict
 from dataclasses import dataclass
 
 
@@ -34,27 +41,58 @@ class SLTCalculator:
         supplier = Supplier(organization, quotation_bdt)
         self.suppliers.append(supplier)
         self.quotations.append(quotation_bdt)
+    
+    def calculate_weighted_average(self) -> float:
+        """
+        Calculate weighted average (x-bar) of quotations.
+        This is the reference mean for SLT calculation.
+        
+        Formula: x-bar = sum(quotations) / count
+        """
+        if len(self.quotations) == 0:
+            return 0
+        return sum(self.quotations) / len(self.quotations)
+    
+    def calculate_standard_deviation_from_weighted_avg(self, weighted_avg: float) -> float:
+        """
+        Calculate standard deviation using weighted average as reference.
+        
+        Formula: SD = sqrt(average of (x-bar - quotation)^2)
+        """
+        if len(self.quotations) < 1:
+            return 0
+        
+        # Step 1: Calculate deviations from weighted average
+        deviations = [weighted_avg - q for q in self.quotations]
+        
+        # Step 2: Square the deviations
+        squared_deviations = [d ** 2 for d in deviations]
+        
+        # Step 3: Calculate average of squared deviations
+        average_squared_deviation = sum(squared_deviations) / len(squared_deviations)
+        
+        # Step 4: Take square root to get standard deviation
+        return average_squared_deviation ** 0.5
         
     def calculate_statistics(self) -> Dict:
-        """Calculate statistical metrics"""
+        """Calculate all statistical metrics"""
         if len(self.quotations) < 1:
             raise ValueError("No suppliers added")
         
-        mean = statistics.mean(self.quotations)
+        # Calculate weighted average (x-bar)
+        weighted_avg = self.calculate_weighted_average()
         
-        if len(self.quotations) > 1:
-            std_dev = statistics.stdev(self.quotations)
-        else:
-            std_dev = 0
+        # Calculate standard deviation from weighted average
+        std_dev = self.calculate_standard_deviation_from_weighted_avg(weighted_avg)
         
         # Calculate xNPPI (indexed average)
-        xnppi = mean / self.nppi_factor
+        xnppi = weighted_avg / self.nppi_factor
         
-        # Calculate SLT (Significant Level Threshold)
-        slt = mean - std_dev
+        # Calculate SLT = x-bar - Standard Deviation
+        slt = weighted_avg - std_dev
         
         return {
-            'mean': mean,
+            'weighted_average': weighted_avg,
             'std_dev': std_dev,
             'xnppi': xnppi,
             'slt': slt,
@@ -65,31 +103,24 @@ class SLTCalculator:
     def calculate_slt_scores(self) -> List[Dict]:
         """Calculate individual SLT scores for each supplier"""
         stats = self.calculate_statistics()
-        mean = stats['mean']
-        std_dev = stats['std_dev']
+        slt = stats['slt']
         
         scores = []
         for supplier in self.suppliers:
-            # Calculate deviation from mean
-            deviation = supplier.quotation_bdt - mean
-            
-            # Calculate SLT score (distance from SLT threshold)
-            slt_score = supplier.quotation_bdt - (mean - std_dev)
+            # Calculate SLT score (quotation - SLT threshold)
+            slt_score = supplier.quotation_bdt - slt
             
             scores.append({
                 'organization': supplier.organization,
                 'quotation_bdt': supplier.quotation_bdt,
-                'deviation_from_mean': deviation,
                 'slt_score': slt_score,
                 'within_range': slt_score >= 0
             })
         
         # Sort by SLT score (lowest is best)
-        scores.sort(key=lambda x: x['slt_score'])
-        
-        return scores
+        return sorted(scores, key=lambda x: x['slt_score'])
     
-    def get_winner(self) -> Tuple[str, float, Dict]:
+    def get_winner(self) -> tuple:
         """
         Determine the winner based on lowest significant SLT value
         
@@ -99,7 +130,7 @@ class SLTCalculator:
         scores = self.calculate_slt_scores()
         stats = self.calculate_statistics()
         
-        # Find supplier with lowest valid SLT score (within acceptable range)
+        # Find supplier with lowest valid SLT score (>= 0)
         winner = None
         for score in scores:
             if score['within_range']:
@@ -115,7 +146,7 @@ class SLTCalculator:
             winner['quotation_bdt'],
             {
                 'slt': stats['slt'],
-                'mean': stats['mean'],
+                'weighted_average': stats['weighted_average'],
                 'std_dev': stats['std_dev'],
                 'xnppi': stats['xnppi'],
                 'slt_score': winner['slt_score'],
@@ -129,14 +160,14 @@ class SLTCalculator:
         winner, quotation, details = self.get_winner()
         
         print("=" * 70)
-        print("SLT (Significant Level Threshold) CALCULATOR - TENDER EVALUATION")
+        print("SLT (SIGNIFICANT LEVEL THRESHOLD) CALCULATOR - TENDER EVALUATION")
         print("=" * 70)
         print()
         
         print("STATISTICAL ANALYSIS:")
         print("-" * 70)
         print(f"Number of Suppliers:        {len(self.suppliers)}")
-        print(f"Average Quotation (Mean):   BDT {stats['mean']:,.2f}")
+        print(f"Weighted Average (x-bar):   BDT {stats['weighted_average']:,.2f}")
         print(f"Standard Deviation:         BDT {stats['std_dev']:,.2f}")
         print(f"NPPI Factor:                {self.nppi_factor}")
         print(f"xNPPI (Indexed Average):    BDT {stats['xnppi']:,.2f}")

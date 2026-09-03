@@ -2,11 +2,13 @@
  * SLT (Significant Level Threshold) Calculator for Tender Evaluation
  * Determines the winning supplier bid using statistical analysis
  * 
- * Input Parameters:
- * - estimatedCost: Budget/Estimated cost
- * - organizations: Array of supplier objects
- * - quotationBDT: Quotation amount in Bengali Taka
- * - xNPPIFactor: NPPI Index factor (typically 0.955)
+ * CORRECT FORMULA (as per Excel implementation):
+ * 1. Calculate Weighted Average (x-bar) from all quotations
+ * 2. Calculate deviations from weighted average: deviation = x-bar - quotation
+ * 3. Calculate standard deviation: SD = sqrt(average of deviations^2)
+ * 4. SLT = x-bar - Standard Deviation
+ * 5. SLT Score for each supplier = quotation - SLT
+ * 6. Winner = supplier with lowest valid SLT score (>= 0)
  */
 
 class SLTCalculator {
@@ -26,36 +28,57 @@ class SLTCalculator {
     }
 
     /**
-     * Calculate mean (average) of quotations
+     * Calculate weighted average (x-bar) of quotations.
+     * This is the reference mean for SLT calculation.
      */
-    calculateMean() {
+    calculateWeightedAverage() {
+        if (this.suppliers.length === 0) return 0;
         const sum = this.suppliers.reduce((acc, s) => acc + s.quotationBdt, 0);
         return sum / this.suppliers.length;
     }
 
     /**
-     * Calculate standard deviation
+     * Calculate standard deviation using weighted average as reference.
+     * Formula: SD = sqrt(average of (x-bar - quotation)^2)
      */
-    calculateStdDev() {
-        const mean = this.calculateMean();
-        const squaredDiffs = this.suppliers.map(s => 
-            Math.pow(s.quotationBdt - mean, 2)
-        );
-        const variance = squaredDiffs.reduce((a, b) => a + b, 0) / this.suppliers.length;
-        return Math.sqrt(variance);
+    calculateStdDevFromWeightedAvg(weightedAvg) {
+        if (this.suppliers.length < 1) return 0;
+
+        // Step 1: Calculate deviations from weighted average
+        const deviations = this.suppliers.map(s => weightedAvg - s.quotationBdt);
+
+        // Step 2: Square the deviations
+        const squaredDeviations = deviations.map(d => Math.pow(d, 2));
+
+        // Step 3: Calculate average of squared deviations
+        const avgSquaredDev = squaredDeviations.reduce((a, b) => a + b, 0) / this.suppliers.length;
+
+        // Step 4: Take square root to get standard deviation
+        return Math.sqrt(avgSquaredDev);
     }
 
     /**
      * Calculate all statistics
      */
     calculateStatistics() {
-        const mean = this.calculateMean();
-        const stdDev = this.calculateStdDev();
-        const xNPPI = mean / this.nppiFactorParam;
-        const slt = mean - stdDev;
+        if (this.suppliers.length < 1) {
+            throw new Error("No suppliers added");
+        }
+
+        // Calculate weighted average (x-bar)
+        const weightedAvg = this.calculateWeightedAverage();
+
+        // Calculate standard deviation from weighted average
+        const stdDev = this.calculateStdDevFromWeightedAvg(weightedAvg);
+
+        // Calculate xNPPI (indexed average)
+        const xNPPI = weightedAvg / this.nppiFactorParam;
+
+        // Calculate SLT = x-bar - Standard Deviation
+        const slt = weightedAvg - stdDev;
 
         return {
-            mean,
+            weightedAvg,
             stdDev,
             xNPPI,
             slt,
@@ -69,14 +92,13 @@ class SLTCalculator {
      */
     calculateSLTScores() {
         const stats = this.calculateStatistics();
-        const { mean, stdDev } = stats;
+        const { slt } = stats;
 
         const scores = this.suppliers.map(supplier => ({
             organization: supplier.organization,
             quotationBdt: supplier.quotationBdt,
-            deviationFromMean: supplier.quotationBdt - mean,
-            sltScore: supplier.quotationBdt - (mean - stdDev),
-            withinRange: (supplier.quotationBdt - (mean - stdDev)) >= 0
+            sltScore: supplier.quotationBdt - slt,
+            withinRange: (supplier.quotationBdt - slt) >= 0
         }));
 
         // Sort by SLT score (lowest is best)
@@ -92,7 +114,7 @@ class SLTCalculator {
 
         // Find supplier with lowest valid SLT score
         let winner = scores.find(score => score.withinRange);
-        
+
         // If no supplier meets criteria, select lowest quotation
         if (!winner) {
             winner = scores[0];
@@ -104,7 +126,7 @@ class SLTCalculator {
             sltScore: winner.sltScore,
             details: {
                 slt: stats.slt,
-                mean: stats.mean,
+                weightedAvg: stats.weightedAvg,
                 stdDev: stats.stdDev,
                 xNPPI: stats.xNPPI,
                 allScores: scores
@@ -127,7 +149,7 @@ class SLTCalculator {
         console.log("STATISTICAL ANALYSIS:");
         console.log("-".repeat(70));
         console.log(`Number of Suppliers:        ${this.suppliers.length}`);
-        console.log(`Average Quotation (Mean):   BDT ${this.formatNumber(stats.mean)}`);
+        console.log(`Weighted Average (x-bar):   BDT ${this.formatNumber(stats.weightedAvg)}`);
         console.log(`Standard Deviation:         BDT ${this.formatNumber(stats.stdDev)}`);
         console.log(`NPPI Factor:                ${this.nppiFactorParam}`);
         console.log(`xNPPI (Indexed Average):    BDT ${this.formatNumber(stats.xNPPI)}`);
@@ -165,9 +187,9 @@ class SLTCalculator {
      * Format number with thousand separators
      */
     formatNumber(num) {
-        return num.toLocaleString('en-BD', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        return num.toLocaleString('en-BD', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         });
     }
 
@@ -179,11 +201,10 @@ class SLTCalculator {
         const stats = this.calculateStatistics();
 
         return {
-            estimatedCost: this.suppliers[0]?.quotationBdt || null,
             nppiFactorParam: this.nppiFactorParam,
             statistics: {
                 numberSuppliers: this.suppliers.length,
-                meanQuotation: stats.mean,
+                weightedAverage: stats.weightedAvg,
                 standardDeviation: stats.stdDev,
                 xNPPI: stats.xNPPI,
                 sltThreshold: stats.slt,

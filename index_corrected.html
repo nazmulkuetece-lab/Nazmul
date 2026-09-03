@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SLT Calculator - Tender Evaluation System</title>
+    <title>SLT Calculator - Tender Evaluation System (Corrected)</title>
     <style>
         * {
             margin: 0;
@@ -386,12 +386,22 @@
             color: #999;
             font-size: 12px;
         }
+
+        .formula-note {
+            background: #fef3c7;
+            padding: 12px;
+            border-left: 4px solid #f59e0b;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #92400e;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎯 SLT Calculator</h1>
+            <h1>🎯 SLT Calculator (Corrected Formula)</h1>
             <p class="subtitle">Significant Level Threshold - Tender Evaluation System</p>
         </header>
 
@@ -399,6 +409,13 @@
             <!-- Input Section -->
             <div class="card">
                 <h2>📋 Input Data</h2>
+
+                <div class="formula-note">
+                    <strong>Formula Used:</strong><br>
+                    SLT = Weighted Average (x-bar) - Standard Deviation<br>
+                    Where: Weighted Avg = Σ quotations / count<br>
+                    And: Std Dev = √[Σ(x-bar - quotation)² / count]
+                </div>
 
                 <div class="form-group">
                     <label for="estimatedCost">Estimated Cost (BDT)</label>
@@ -467,8 +484,8 @@
 
                     <div class="stats-grid">
                         <div class="stat-box">
-                            <div class="stat-label">Mean Quotation</div>
-                            <div class="stat-value" id="meanValue">—</div>
+                            <div class="stat-label">Weighted Avg (x-bar)</div>
+                            <div class="stat-value" id="weightedAvgValue">—</div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-label">Standard Deviation</div>
@@ -504,7 +521,8 @@
         </main>
 
         <footer>
-            <p>SLT Calculator v1.0 | Tender Evaluation System | © 2026</p>
+            <p>SLT Calculator v2.0 (Corrected Formula) | Tender Evaluation System | © 2026</p>
+            <p>Formula: SLT = Weighted Average - Standard Deviation (calculated from weighted average deviations)</p>
         </footer>
     </div>
 
@@ -586,12 +604,25 @@
             }
 
             const quotations = suppliers.map(s => s.quotationBdt);
-            const mean = quotations.reduce((a, b) => a + b, 0) / quotations.length;
-            const variance = quotations.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / quotations.length;
-            const stdDev = Math.sqrt(variance);
+            
+            // Step 1: Calculate weighted average (x-bar)
+            const weightedAvg = quotations.reduce((a, b) => a + b, 0) / quotations.length;
+            
+            // Step 2: Calculate deviations from weighted average
+            const deviations = quotations.map(q => weightedAvg - q);
+            
+            // Step 3: Square the deviations and calculate average
+            const squaredDeviations = deviations.map(d => d * d);
+            const avgSquaredDev = squaredDeviations.reduce((a, b) => a + b, 0) / squaredDeviations.length;
+            
+            // Step 4: Calculate standard deviation
+            const stdDev = Math.sqrt(avgSquaredDev);
+            
             const nppiFactorValue = parseFloat(document.getElementById('nppiFactor').value);
-            const xnppi = mean / nppiFactorValue;
-            const slt = mean - stdDev;
+            const xnppi = weightedAvg / nppiFactorValue;
+            
+            // Step 5: Calculate SLT = x-bar - Std Dev
+            const slt = weightedAvg - stdDev;
 
             // Calculate scores
             const scores = suppliers.map(s => ({
@@ -605,15 +636,15 @@
             let winner = scores.find(s => s.withinRange);
             if (!winner) winner = scores[0];
 
-            displayResults(mean, stdDev, xnppi, slt, scores, winner);
+            displayResults(weightedAvg, stdDev, xnppi, slt, scores, winner);
             showMessage('✅ SLT calculation completed successfully!', 'success');
         }
 
-        function displayResults(mean, stdDev, xnppi, slt, scores, winner) {
+        function displayResults(weightedAvg, stdDev, xnppi, slt, scores, winner) {
             document.getElementById('resultsContainer').style.display = 'none';
             document.getElementById('resultsSection').style.display = 'block';
 
-            document.getElementById('meanValue').textContent = 'BDT ' + formatNumber(mean);
+            document.getElementById('weightedAvgValue').textContent = 'BDT ' + formatNumber(weightedAvg);
             document.getElementById('stdDevValue').textContent = 'BDT ' + formatNumber(stdDev);
             document.getElementById('xnppiValue').textContent = 'BDT ' + formatNumber(xnppi);
             document.getElementById('sltValue').textContent = 'BDT ' + formatNumber(slt);
@@ -664,7 +695,8 @@
                 estimatedCost,
                 nppiFactorValue,
                 suppliers,
-                exportDate: new Date().toISOString()
+                exportDate: new Date().toISOString(),
+                formula: "SLT = Weighted Average - Standard Deviation"
             };
 
             const dataStr = JSON.stringify(data, null, 2);
@@ -678,7 +710,7 @@
         }
 
         function exportCSV() {
-            const headers = ['Rank', 'Organization', 'Quotation (BDT)', 'SLT Score', 'Status'];
+            const headers = ['Rank', 'Organization', 'Quotation (BDT)'];
             const rows = suppliers.map(s => [s.organization, formatNumber(s.quotationBdt)]);
 
             const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
