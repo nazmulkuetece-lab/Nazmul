@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLT (Significant Level Threshold) Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .section h2 {
+            color: #333;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95em;
+        }
+        
+        .input-group input,
+        .input-group select {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        
+        .results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 1em;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .result-value {
+            color: #667eea;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        
+        .suppliers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.95em;
+        }
+        
+        .suppliers-table thead {
+            background: #667eea;
+            color: white;
+        }
+        
+        .suppliers-table th,
+        .suppliers-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .suppliers-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .supplier-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .supplier-input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+        
+        .supplier-input-group button {
+            padding: 10px 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .supplier-input-group button:hover {
+            background: #c82333;
+        }
+        
+        .add-supplier-btn {
+            width: 100%;
+            padding: 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .add-supplier-btn:hover {
+            background: #218838;
+        }
+        
+        .formula-info {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #333;
+        }
+        
+        .formula-info h3 {
+            color: #2196F3;
+            margin-bottom: 8px;
+        }
+        
+        .formula-info code {
+            display: block;
+            background: white;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .export-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 SLT Calculator</h1>
+            <p>Significant Level Threshold for Fair Supplier Bid Evaluation</p>
+        </div>
+        
+        <div class="content">
+            <!-- Left Column: Input Parameters -->
+            <div class="section">
+                <h2>Input Parameters</h2>
+                
+                <div class="input-group">
+                    <label for="estimatedCost">Estimated Cost (BDT)</label>
+                    <input type="number" id="estimatedCost" placeholder="e.g., 1000000" value="0">
+                </div>
+                
+                <div class="input-group">
+                    <label for="organization">Organization/Project Name</label>
+                    <input type="text" id="organization" placeholder="e.g., Government Procurement">
+                </div>
+                
+                <div class="input-group">
+                    <label for="quotationBDT">Quotation Reference BDT</label>
+                    <input type="number" id="quotationBDT" placeholder="e.g., 1000000" value="0">
+                </div>
+                
+                <div class="input-group">
+                    <label for="xNPPI">xNPPI Factor (Price Index)</label>
+                    <input type="number" id="xNPPI" placeholder="e.g., 0.1998" value="0.1998" step="0.0001">
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="calculateSLT()">Calculate SLT</button>
+                    <button class="btn-secondary" onclick="resetForm()">Reset</button>
+                </div>
+                
+                <div class="formula-info">
+                    <h3>📐 SLT Formula</h3>
+                    <p>The SLT is calculated using a weighted average reference:</p>
+                    <code>
+x̄ = weighted average of quotations<br>
+σ = √(Σ(x̄ - quotation)² / n)<br>
+SLT = x̄ - σ
+                    </code>
+                </div>
+            </div>
+            
+            <!-- Right Column: Results and Suppliers -->
+            <div class="section">
+                <h2>Results</h2>
+                
+                <div class="results">
+                    <div class="result-item">
+                        <span class="result-label">Weighted Average:</span>
+                        <span class="result-value" id="weightedAvg">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Standard Deviation:</span>
+                        <span class="result-value" id="stdDev">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">SLT Value:</span>
+                        <span class="result-value" id="sltValue">-</span>
+                    </div>
+                </div>
+                
+                <h2 style="margin-top: 30px;">Supplier Quotations</h2>
+                
+                <div id="suppliersContainer">
+                    <!-- Suppliers will be added here dynamically -->
+                </div>
+                
+                <button class="add-supplier-btn" onclick="addSupplier()">+ Add Supplier</button>
+                
+                <table class="suppliers-table" id="suppliersTable">
+                    <thead>
+                        <tr>
+                            <th>Supplier Name</th>
+                            <th>Quotation (BDT)</th>
+                            <th>SLT Score</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suppliersTableBody">
+                        <!-- Table rows will be added here -->
+                    </tbody>
+                </table>
+                
+                <div class="export-section">
+                    <button class="btn-primary" onclick="exportResults()">📥 Export Results (JSON)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Application data
+        let suppliers = [];
+        
+        // Calculate weighted average (simple mean in this version)
+        function calculateWeightedAverage(quotations) {
+            if (quotations.length === 0) return 0;
+            const sum = quotations.reduce((a, b) => a + b, 0);
+            return sum / quotations.length;
+        }
+        
+        // Calculate standard deviation based on deviations from weighted average
+        function calculateStandardDeviation(quotations, weightedAvg) {
+            if (quotations.length === 0) return 0;
+            
+            const deviationsSquared = quotations.map(q => {
+                const deviation = weightedAvg - q;
+                return deviation * deviation;
+            });
+            
+            const avgDeviationSquared = deviationsSquared.reduce((a, b) => a + b, 0) / quotations.length;
+            return Math.sqrt(avgDeviationSquared);
+        }
+        
+        // Main SLT calculation
+        function calculateSLT() {
+            // Get quotations from supplier list
+            const quotations = suppliers.map(s => parseFloat(s.quotation) || 0).filter(q => q > 0);
+            
+            if (quotations.length === 0) {
+                alert('Please add at least one supplier quotation');
+                return;
+            }
+            
+            // Calculate weighted average and standard deviation
+            const weightedAvg = calculateWeightedAverage(quotations);
+            const stdDev = calculateStandardDeviation(quotations, weightedAvg);
+            const slt = weightedAvg - stdDev;
+            
+            // Display results
+            document.getElementById('weightedAvg').textContent = weightedAvg.toFixed(2);
+            document.getElementById('stdDev').textContent = stdDev.toFixed(8);
+            document.getElementById('sltValue').textContent = slt.toFixed(2);
+            
+            // Calculate and display supplier evaluations
+            updateSuppliersTable(slt);
+        }
+        
+        // Update suppliers table with SLT scores
+        function updateSuppliersTable(slt) {
+            const tbody = document.getElementById('suppliersTableBody');
+            tbody.innerHTML = '';
+            
+            suppliers.forEach((supplier, index) => {
+                const quotation = parseFloat(supplier.quotation) || 0;
+                const sltScore = quotation - slt;
+                const status = sltScore >= 0 ? '✓ Acceptable' : '✗ Below SLT';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${supplier.name || 'Supplier ' + (index + 1)}</td>
+                    <td>${quotation.toFixed(2)}</td>
+                    <td>${sltScore.toFixed(2)}</td>
+                    <td>${status}</td>
+                    <td><button class="btn-secondary" onclick="removeSupplier(${index})" style="padding: 5px 10px; font-size: 0.9em;">Remove</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Add new supplier
+        function addSupplier() {
+            suppliers.push({ name: '', quotation: 0 });
+            renderSupplierInputs();
+        }
+        
+        // Remove supplier
+        function removeSupplier(index) {
+            suppliers.splice(index, 1);
+            renderSupplierInputs();
+        }
+        
+        // Render supplier input fields
+        function renderSupplierInputs() {
+            const container = document.getElementById('suppliersContainer');
+            container.innerHTML = '';
+            
+            suppliers.forEach((supplier, index) => {
+                const div = document.createElement('div');
+                div.className = 'supplier-input-group';
+                div.innerHTML = `
+                    <input type="text" placeholder="Supplier Name" value="${supplier.name || ''}" 
+                           onchange="suppliers[${index}].name = this.value">
+                    <input type="number" placeholder="Quotation (BDT)" value="${supplier.quotation || ''}" 
+                           onchange="suppliers[${index}].quotation = this.value">
+                    <button onclick="removeSupplier(${index})">×</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // Export results to JSON
+        function exportResults() {
+            const quotations = suppliers.map(s => parseFloat(s.quotation) || 0).filter(q => q > 0);
+            const weightedAvg = calculateWeightedAverage(quotations);
+            const stdDev = calculateStandardDeviation(quotations, weightedAvg);
+            const slt = weightedAvg - stdDev;
+            
+            const results = {
+                metadata: {
+                    estimatedCost: parseFloat(document.getElementById('estimatedCost').value),
+                    organization: document.getElementById('organization').value,
+                    quotationBDT: parseFloat(document.getElementById('quotationBDT').value),
+                    xNPPI: parseFloat(document.getElementById('xNPPI').value),
+                    calculatedAt: new Date().toISOString()
+                },
+                calculations: {
+                    weightedAverage: weightedAvg,
+                    standardDeviation: stdDev,
+                    slt: slt
+                },
+                suppliers: suppliers.map((supplier, index) => {
+                    const quotation = parseFloat(supplier.quotation) || 0;
+                    return {
+                        name: supplier.name || 'Supplier ' + (index + 1),
+                        quotation: quotation,
+                        sltScore: quotation - slt,
+                        acceptable: (quotation - slt) >= 0
+                    };
+                })
+            };
+            
+            const dataStr = JSON.stringify(results, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `SLT-Results-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Reset form
+        function resetForm() {
+            suppliers = [];
+            document.getElementById('estimatedCost').value = 0;
+            document.getElementById('organization').value = '';
+            document.getElementById('quotationBDT').value = 0;
+            document.getElementById('xNPPI').value = 0.1998;
+            document.getElementById('weightedAvg').textContent = '-';
+            document.getElementById('stdDev').textContent = '-';
+            document.getElementById('sltValue').textContent = '-';
+            document.getElementById('suppliersContainer').innerHTML = '';
+            document.getElementById('suppliersTableBody').innerHTML = '';
+        }
+        
+        // Initialize with one supplier
+        window.addEventListener('load', () => {
+            addSupplier();
+        });
+    </script>
+</body>
+</html>
